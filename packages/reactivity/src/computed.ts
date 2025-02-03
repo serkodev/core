@@ -41,10 +41,16 @@ export interface WritableComputedOptions<T, S = T> {
 }
 
 /**
- * @internal type check workaround for isolatedDeclarations
+ * type check workaround for isolatedDeclarations
  */
-interface ComputedRefImplReactiveFlags {
+type ComputedRefImplReactiveFlags = {
+  /**
+   * @internal
+   */
   [ReactiveFlags.IS_REF]: boolean
+  /**
+   * @internal
+   */
   [ReactiveFlags.IS_READONLY]: boolean
 }
 

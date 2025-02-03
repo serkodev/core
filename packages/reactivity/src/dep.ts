@@ -66,7 +66,7 @@ export class Link {
 }
 
 /**
- * @internal type check workaround for isolatedDeclarations
+ * type check workaround for isolatedDeclarations
  */
 interface DepReactiveFlags {
   [ReactiveFlags.SKIP]: boolean
@@ -101,9 +101,6 @@ export class Dep implements DepReactiveFlags {
    */
   sc: number = 0
 
-  /**
-   * @internal
-   */
   readonly __v_skip = true
 
   constructor(public computed?: ComputedRefImpl | undefined) {
