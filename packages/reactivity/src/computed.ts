@@ -41,10 +41,20 @@ export interface WritableComputedOptions<T, S = T> {
 }
 
 /**
+ * @internal type check workaround for isolatedDeclarations
+ */
+interface ComputedRefImplReactiveFlags {
+  [ReactiveFlags.IS_REF]: boolean
+  [ReactiveFlags.IS_READONLY]: boolean
+}
+
+/**
  * @private exported by @vue/reactivity for Vue core use, but not exported from
  * the main vue package
  */
-export class ComputedRefImpl<T = any> implements Subscriber {
+export class ComputedRefImpl<T = any>
+  implements Subscriber, ComputedRefImplReactiveFlags
+{
   /**
    * @internal
    */
@@ -57,12 +67,10 @@ export class ComputedRefImpl<T = any> implements Subscriber {
    * @internal
    */
   readonly __v_isRef = true
-  // TODO isolatedDeclarations ReactiveFlags.IS_REF
   /**
    * @internal
    */
   readonly __v_isReadonly: boolean
-  // TODO isolatedDeclarations ReactiveFlags.IS_READONLY
   // A computed is also a subscriber that tracks other deps
   /**
    * @internal

@@ -1,6 +1,10 @@
 import { extend, isArray, isIntegerKey, isMap, isSymbol } from '@vue/shared'
 import type { ComputedRefImpl } from './computed'
-import { type TrackOpTypes, TriggerOpTypes } from './constants'
+import {
+  type ReactiveFlags,
+  type TrackOpTypes,
+  TriggerOpTypes,
+} from './constants'
 import {
   type DebuggerEventExtraInfo,
   EffectFlags,
@@ -62,9 +66,13 @@ export class Link {
 }
 
 /**
- * @internal
+ * @internal type check workaround for isolatedDeclarations
  */
-export class Dep {
+interface DepReactiveFlags {
+  [ReactiveFlags.SKIP]: boolean
+}
+
+export class Dep implements DepReactiveFlags {
   version = 0
   /**
    * Link between this dep and the current active effect
@@ -97,7 +105,6 @@ export class Dep {
    * @internal
    */
   readonly __v_skip = true
-  // TODO isolatedDeclarations ReactiveFlags.SKIP
 
   constructor(public computed?: ComputedRefImpl | undefined) {
     if (__DEV__) {
