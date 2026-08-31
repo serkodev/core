@@ -1352,6 +1352,58 @@ describe('SSR hydration', () => {
     expect(onRootResolve).toHaveBeenCalledTimes(1)
   })
 
+  // same for an async component wrapper that has not loaded yet: it already
+  // had a hydration placeholder (#3787), but without a render job the
+  // placeholder was never unmounted, so the SSR DOM stayed next to the new
+  // branch
+  test('Suspense: toggle a hydrating suspense away from an unloaded async component', async () => {
+    const { container, ssrHtml, route, release, onResolve } =
+      await hydrateSuspenseApp(gate => {
+        const route = ref('a')
+        const onResolve = vi.fn()
+
+        const PageAInner = defineComponent({
+          setup: () => () => h('div', [h('span', 'page a')]),
+        })
+        const PageA = defineAsyncComponent(() => gate().then(() => PageAInner))
+        const PageB = defineComponent({
+          setup: () => () => h('div', [h('span', 'page b')]),
+        })
+
+        const App = defineComponent({
+          setup() {
+            return () =>
+              h(
+                Suspense,
+                { onResolve },
+                {
+                  default: () =>
+                    route.value === 'a'
+                      ? h(PageA, { key: 'a' })
+                      : h(PageB, { key: 'b' }),
+                },
+              )
+          },
+        })
+
+        return { App, route, onResolve }
+      })
+
+    expect(ssrHtml).toBe(`<div><span>page a</span></div>`)
+    expect(onResolve).not.toHaveBeenCalled()
+
+    route.value = 'b'
+    await nextTick()
+    expect(container.innerHTML).toBe(`<div><span>page b</span></div>`)
+    expect(onResolve).toHaveBeenCalledTimes(1)
+
+    // the abandoned chunk finishing must not resurrect the old branch
+    release()
+    await new Promise(r => setTimeout(r))
+    expect(container.innerHTML).toBe(`<div><span>page b</span></div>`)
+    expect(onResolve).toHaveBeenCalledTimes(1)
+  })
+
   // a same-root-type update to a hydrating suspense used to patch against the
   // detached hiddenContainer while the anchors come from the live SSR DOM, so
   // inserting a node threw. the pending branch of a hydrating boundary lives
