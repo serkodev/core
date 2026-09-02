@@ -2367,7 +2367,8 @@ function baseCreateRenderer(
     } else if (instance.vnode.el && subTree) {
       // hydration was interrupted before this component rendered (`vnode.el`
       // is only set this early when hydrating) - unmount the placeholder
-      // covering the claimed DOM
+      // covering the claimed DOM, carrying the root's transition hooks
+      subTree.transition = instance.vnode.transition
       unmount(subTree, instance, parentSuspense, doRemove)
     }
     // unmounted hook
