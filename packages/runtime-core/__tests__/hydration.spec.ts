@@ -1626,6 +1626,62 @@ describe('SSR hydration', () => {
     expect(onRootResolve).toHaveBeenCalledTimes(1)
   })
 
+  // a re-render of the same branch before the toggle replaces the pending
+  // component's vnode: that vnode must keep the el adopted during hydration,
+  // and it carries the transition hooks the boundary later mutates - so the
+  // placeholder must take the hooks over at teardown, not when it is created
+  test('Suspense: update nested suspensible suspense during hydration inside an out-in transition after a same-branch update', async () => {
+    const { container, ssrHtml, route, tick, release, onRootResolve, onLeave } =
+      await hydrateSuspenseApp(gate => {
+        const route = ref('a')
+        const tick = ref(0)
+        const onRootResolve = vi.fn()
+        const onLeave = vi.fn((el: Element, done: () => void) => done())
+
+        const PageA = defineComponent({
+          props: { tick: Number },
+          async setup() {
+            await gate()
+            return () => h('div', [h('span', 'page a')])
+          },
+        })
+        const PageB = defineComponent({
+          setup: () => () => h('div', [h('span', 'page b')]),
+        })
+
+        const App = nestedSuspenseApp({
+          onRootResolve,
+          transition: { mode: 'out-in', css: false, onLeave },
+          content: () =>
+            route.value === 'a'
+              ? h(PageA, { key: 'a', tick: tick.value })
+              : h(PageB, { key: 'b' }),
+        })
+
+        return { App, route, tick, onRootResolve, onLeave }
+      })
+
+    expect(ssrHtml).toBe(`<div><span>page a</span></div>`)
+    expect(onRootResolve).not.toHaveBeenCalled()
+
+    // an update to the still-pending branch root first
+    tick.value++
+    await nextTick()
+    expect(container.innerHTML).toBe(`<div><span>page a</span></div>`)
+    expect(onLeave).not.toHaveBeenCalled()
+
+    route.value = 'b'
+    await nextTick()
+    expect(onLeave).toHaveBeenCalledTimes(1)
+    expect(container.innerHTML).toBe(`<div><span>page b</span></div>`)
+    expect(onRootResolve).toHaveBeenCalledTimes(1)
+
+    release()
+    await new Promise(r => setTimeout(r))
+    expect(container.innerHTML).toBe(`<div><span>page b</span></div>`)
+    expect(onRootResolve).toHaveBeenCalledTimes(1)
+  })
+
   // the interrupted branch root may have rendered nothing on the server, so
   // the DOM it claimed is a comment node. its placeholder must mirror that:
   // the leave hooks it takes over on teardown belong to element roots only,

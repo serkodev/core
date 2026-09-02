@@ -1288,7 +1288,10 @@ function baseCreateRenderer(
         !instance.asyncResolved
       ) {
         // async & still pending - just update props and slots
-        // since the component's reactive effect for render isn't set-up yet
+        // since the component's reactive effect for render isn't set-up yet.
+        // carry over the el adopted during hydration: if hydration is
+        // interrupted, teardown of the claimed DOM depends on it
+        n2.el = n1.el
         if (__DEV__) {
           pushWarningContext(n2)
         }
